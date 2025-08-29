@@ -1,7 +1,8 @@
-package metrics_exporter
+package instruments
 
 import (
 	"context"
+	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -10,7 +11,7 @@ type Gauge struct {
 	gauge metric.Float64Gauge
 }
 
-func (g *Gauge) Apply(key string, n interface{}, tags ...*TagModel) error {
+func (g *Gauge) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	value, err := convertToFloat64(n)
 	if err != nil {
 		return err

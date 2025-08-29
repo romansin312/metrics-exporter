@@ -1,6 +1,8 @@
 package metrics_exporter
 
 import (
+	"github.com/romansin312/metrics-exporter/instruments"
+	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
 	"log"
 	"time"
@@ -8,17 +10,17 @@ import (
 
 type MetricsImpl2 struct {
 	meter      metric.Meter
-	counters   map[string]*Counter
-	gauges     map[string]*Gauge
-	histograms map[string]*Histogram
+	counters   map[string]*instruments.Counter
+	gauges     map[string]*instruments.Gauge
+	histograms map[string]*instruments.Histogram
 }
 
 func NewMetrics(meter metric.Meter) *MetricsImpl2 {
 	return &MetricsImpl2{
 		meter:      meter,
-		counters:   make(map[string]*Counter),
-		gauges:     make(map[string]*Gauge),
-		histograms: make(map[string]*Histogram),
+		counters:   make(map[string]*instruments.Counter),
+		gauges:     make(map[string]*instruments.Gauge),
+		histograms: make(map[string]*instruments.Histogram),
 	}
 }
 
@@ -26,7 +28,7 @@ func (m *MetricsImpl2) Increment(key string) {
 	m.IncrementWithTags(key)
 }
 
-func (m *MetricsImpl2) IncrementWithTags(key string, tags ...*TagModel) {
+func (m *MetricsImpl2) IncrementWithTags(key string, tags ...*tags.TagModel) {
 	m.CountWithTags(key, 1, tags...)
 }
 
@@ -34,10 +36,10 @@ func (m *MetricsImpl2) ConfigureCounter(key string, description string) {
 
 }
 
-func (m *MetricsImpl2) CountWithTags(key string, n interface{}, tags ...*TagModel) {
+func (m *MetricsImpl2) CountWithTags(key string, n interface{}, tags ...*tags.TagModel) {
 	counter := m.counters[key]
 	if counter == nil {
-		m.counters[key] = NewCounter(m.meter)
+		m.counters[key] = instruments.NewCounter(m.meter)
 		counter = m.counters[key]
 	}
 
@@ -51,10 +53,10 @@ func (m *MetricsImpl2) Gauge(key string, n interface{}) {
 	m.GaugeWithTags(key, n)
 }
 
-func (m *MetricsImpl2) GaugeWithTags(key string, n interface{}, tags ...*TagModel) {
+func (m *MetricsImpl2) GaugeWithTags(key string, n interface{}, tags ...*tags.TagModel) {
 	gauge := m.gauges[key]
 	if gauge == nil {
-		gauge = NewGauge(m.meter)
+		gauge = instruments.NewGauge(m.meter)
 		m.gauges[key] = gauge
 	}
 
@@ -68,9 +70,9 @@ func (m *MetricsImpl2) Histogram(bucket string, v interface{}) {
 	m.HistogramWithTags(bucket, v)
 }
 
-func (m *MetricsImpl2) HistogramWithTags(bucket string, v interface{}, tags ...*TagModel) {
+func (m *MetricsImpl2) HistogramWithTags(bucket string, v interface{}, tags ...*tags.TagModel) {
 	if m.histograms[bucket] == nil {
-		m.histograms[bucket] = NewHistogram(m.meter)
+		m.histograms[bucket] = instruments.NewHistogram(m.meter)
 	}
 
 	histogram := m.histograms[bucket]
@@ -84,7 +86,7 @@ func (m *MetricsImpl2) Timing(key string, ms interface{}) {
 	m.TimingWithTags(key, ms)
 }
 
-func (m *MetricsImpl2) TimingWithTags(key string, ms interface{}, tags ...*TagModel) {
+func (m *MetricsImpl2) TimingWithTags(key string, ms interface{}, tags ...*tags.TagModel) {
 	m.HistogramWithTags(key+".timing", ms, tags...)
 }
 
@@ -92,7 +94,7 @@ func (m *MetricsImpl2) Duration(key string, d time.Duration) {
 	m.DurationWithTags(key, d)
 }
 
-func (m *MetricsImpl2) DurationWithTags(key string, d time.Duration, tags ...*TagModel) {
+func (m *MetricsImpl2) DurationWithTags(key string, d time.Duration, tags ...*tags.TagModel) {
 	m.HistogramWithTags(key+".duration", d.Milliseconds(), tags...)
 }
 
@@ -100,7 +102,7 @@ func (m *MetricsImpl2) Timer(key string) func() {
 	return m.TimerWithTags(key)
 }
 
-func (m *MetricsImpl2) TimerWithTags(key string, tags ...*TagModel) func() {
+func (m *MetricsImpl2) TimerWithTags(key string, tags ...*tags.TagModel) func() {
 	start := time.Now()
 	return func() {
 		duration := time.Since(start)
@@ -109,9 +111,9 @@ func (m *MetricsImpl2) TimerWithTags(key string, tags ...*TagModel) func() {
 }
 
 func (m *MetricsImpl2) Flush() {
-	m.histograms = make(map[string]*Histogram)
-	m.counters = make(map[string]*Counter)
-	m.gauges = make(map[string]*Gauge)
+	m.histograms = make(map[string]*instruments.Histogram)
+	m.counters = make(map[string]*instruments.Counter)
+	m.gauges = make(map[string]*instruments.Gauge)
 }
 
 func (m *MetricsImpl2) Close() {

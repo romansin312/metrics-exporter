@@ -1,7 +1,8 @@
-package metrics_exporter
+package instruments
 
 import (
 	"fmt"
+	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -67,7 +68,7 @@ func convertToInt64(n interface{}) (int64, error) {
 	}
 }
 
-func convertTagsToAttributes(tags []*TagModel) []attribute.KeyValue {
+func convertTagsToAttributes(tags []*tags.TagModel) []attribute.KeyValue {
 	if len(tags) == 0 {
 		return nil
 	}

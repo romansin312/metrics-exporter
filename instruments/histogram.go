@@ -1,7 +1,8 @@
-package metrics_exporter
+package instruments
 
 import (
 	"context"
+	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -10,7 +11,7 @@ type Histogram struct {
 	histogram metric.Float64Histogram
 }
 
-func (h *Histogram) Apply(key string, v interface{}, tags ...*TagModel) error {
+func (h *Histogram) Apply(key string, v interface{}, tags ...*tags.TagModel) error {
 	value, err := convertToFloat64(v)
 	if err != nil {
 		return err

@@ -1,7 +1,8 @@
-package metrics_exporter
+package instruments
 
 import (
 	"context"
+	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -24,7 +25,7 @@ func (x Counter) Create(key string, description string) error {
 	return nil
 }
 
-func (x Counter) Apply(key string, n interface{}, tags ...*TagModel) error {
+func (x Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	value, err := convertToInt64(n)
 	if err != nil {
 		return err
