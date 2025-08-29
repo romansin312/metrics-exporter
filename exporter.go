@@ -57,7 +57,7 @@ func InitExporter(ctx context.Context, cfg Config) (*Exporter, error) {
 	if cfg.SendingInterval > 0 {
 		sendingInterval = cfg.SendingInterval
 	}
-	
+
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(metric.NewPeriodicReader(otlpExp, metric.WithInterval(sendingInterval))))
@@ -90,7 +90,7 @@ func (e *Exporter) GetMeter(name string) otelMetric.Meter {
 	return e.meterProvider.Meter(name)
 }
 
-func (e *Exporter) CreateMetrics(meterName string) *MetricsImpl {
+func (e *Exporter) CreateMetrics(meterName string) *Metrics {
 	meter := e.GetMeter(meterName)
 	return NewMetrics(meter)
 }
