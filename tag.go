@@ -1,4 +1,4 @@
-package tags
+package metrics_exporter
 
 type TagModel struct {
 	tagName  string
