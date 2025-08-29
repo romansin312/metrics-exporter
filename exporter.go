@@ -19,10 +19,15 @@ type Exporter struct {
 func InitExporter(ctx context.Context, cfg Config) (*Exporter, error) {
 	var exporters []metric.Exporter
 
+	urlPath := "/v1/metrics"
+	if cfg.UrlPath != "" {
+		urlPath = cfg.UrlPath
+	}
+
 	otlpExp, err := otlpmetrichttp.New(
 		ctx,
 		otlpmetrichttp.WithEndpoint(cfg.Endpoint),
-		otlpmetrichttp.WithURLPath("/v1/metrics"),
+		otlpmetrichttp.WithURLPath(urlPath),
 		otlpmetrichttp.WithInsecure(),
 		otlpmetrichttp.WithHeaders(cfg.Headers),
 		otlpmetrichttp.WithTimeout(cfg.Timeout))
@@ -48,9 +53,14 @@ func InitExporter(ctx context.Context, cfg Config) (*Exporter, error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
+	sendingInterval := time.Second * 3
+	if cfg.SendingInterval > 0 {
+		sendingInterval = cfg.SendingInterval
+	}
+	
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(otlpExp, metric.WithInterval(3*time.Second))))
+		metric.WithReader(metric.NewPeriodicReader(otlpExp, metric.WithInterval(sendingInterval))))
 
 	shutdownFunc := func(ctx context.Context) error {
 		var err error
