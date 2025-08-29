@@ -18,7 +18,7 @@ func (h *Histogram) Apply(key string, v interface{}, tags ...*tags.TagModel) err
 	}
 
 	if h.histogram == nil {
-		err = h.Create(key, "")
+		err = h.CreateInnerInstrument(key, "")
 		if err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ func (h *Histogram) Apply(key string, v interface{}, tags ...*tags.TagModel) err
 	return nil
 }
 
-func (h *Histogram) Create(key string, description string) error {
+func (h *Histogram) CreateInnerInstrument(key string, description string) error {
 	hist, err := h.meter.Float64Histogram(key, metric.WithDescription(description))
 	if err != nil {
 		return err

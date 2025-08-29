@@ -6,5 +6,5 @@ import (
 
 type IInstrument interface {
 	Apply(key string, n interface{}, tags ...*tags.TagModel) error
-	Create(key string, description string) error
+	CreateInnerInstrument(key string, description string) error
 }

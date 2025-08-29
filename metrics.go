@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-type MetricsImpl2 struct {
+type MetricsImpl struct {
 	meter      metric.Meter
 	counters   map[string]*instruments.Counter
 	gauges     map[string]*instruments.Gauge
 	histograms map[string]*instruments.Histogram
 }
 
-func NewMetrics(meter metric.Meter) *MetricsImpl2 {
-	return &MetricsImpl2{
+func NewMetrics(meter metric.Meter) *MetricsImpl {
+	return &MetricsImpl{
 		meter:      meter,
 		counters:   make(map[string]*instruments.Counter),
 		gauges:     make(map[string]*instruments.Gauge),
@@ -24,19 +24,51 @@ func NewMetrics(meter metric.Meter) *MetricsImpl2 {
 	}
 }
 
-func (m *MetricsImpl2) Increment(key string) {
+func (m *MetricsImpl) Increment(key string) {
 	m.IncrementWithTags(key)
 }
 
-func (m *MetricsImpl2) IncrementWithTags(key string, tags ...*tags.TagModel) {
+func (m *MetricsImpl) IncrementWithTags(key string, tags ...*tags.TagModel) {
 	m.CountWithTags(key, 1, tags...)
 }
 
-func (m *MetricsImpl2) ConfigureCounter(key string, description string) {
+func (m *MetricsImpl) CreateCounter(key string, description string) error {
+	newCounter := instruments.NewCounter(m.meter)
+	err := newCounter.CreateInnerInstrument(key, description)
+	if err != nil {
+		return err
+	}
 
+	m.counters[key] = newCounter
+
+	return nil
 }
 
-func (m *MetricsImpl2) CountWithTags(key string, n interface{}, tags ...*tags.TagModel) {
+func (m *MetricsImpl) CreateGauge(key string, description string) error {
+	newGauge := instruments.NewGauge(m.meter)
+	err := newGauge.CreateInnerInstrument(key, description)
+	if err != nil {
+		return err
+	}
+
+	m.gauges[key] = newGauge
+
+	return nil
+}
+
+func (m *MetricsImpl) CreateHistogram(key string, description string) error {
+	newHistogram := instruments.NewHistogram(m.meter)
+	err := newHistogram.CreateInnerInstrument(key, description)
+	if err != nil {
+		return err
+	}
+
+	m.histograms[key] = newHistogram
+
+	return nil
+}
+
+func (m *MetricsImpl) CountWithTags(key string, n interface{}, tags ...*tags.TagModel) {
 	counter := m.counters[key]
 	if counter == nil {
 		m.counters[key] = instruments.NewCounter(m.meter)
@@ -49,11 +81,11 @@ func (m *MetricsImpl2) CountWithTags(key string, n interface{}, tags ...*tags.Ta
 	}
 }
 
-func (m *MetricsImpl2) Gauge(key string, n interface{}) {
+func (m *MetricsImpl) Gauge(key string, n interface{}) {
 	m.GaugeWithTags(key, n)
 }
 
-func (m *MetricsImpl2) GaugeWithTags(key string, n interface{}, tags ...*tags.TagModel) {
+func (m *MetricsImpl) GaugeWithTags(key string, n interface{}, tags ...*tags.TagModel) {
 	gauge := m.gauges[key]
 	if gauge == nil {
 		gauge = instruments.NewGauge(m.meter)
@@ -66,11 +98,11 @@ func (m *MetricsImpl2) GaugeWithTags(key string, n interface{}, tags ...*tags.Ta
 	}
 }
 
-func (m *MetricsImpl2) Histogram(bucket string, v interface{}) {
+func (m *MetricsImpl) Histogram(bucket string, v interface{}) {
 	m.HistogramWithTags(bucket, v)
 }
 
-func (m *MetricsImpl2) HistogramWithTags(bucket string, v interface{}, tags ...*tags.TagModel) {
+func (m *MetricsImpl) HistogramWithTags(bucket string, v interface{}, tags ...*tags.TagModel) {
 	if m.histograms[bucket] == nil {
 		m.histograms[bucket] = instruments.NewHistogram(m.meter)
 	}
@@ -82,27 +114,27 @@ func (m *MetricsImpl2) HistogramWithTags(bucket string, v interface{}, tags ...*
 	}
 }
 
-func (m *MetricsImpl2) Timing(key string, ms interface{}) {
+func (m *MetricsImpl) Timing(key string, ms interface{}) {
 	m.TimingWithTags(key, ms)
 }
 
-func (m *MetricsImpl2) TimingWithTags(key string, ms interface{}, tags ...*tags.TagModel) {
+func (m *MetricsImpl) TimingWithTags(key string, ms interface{}, tags ...*tags.TagModel) {
 	m.HistogramWithTags(key+".timing", ms, tags...)
 }
 
-func (m *MetricsImpl2) Duration(key string, d time.Duration) {
+func (m *MetricsImpl) Duration(key string, d time.Duration) {
 	m.DurationWithTags(key, d)
 }
 
-func (m *MetricsImpl2) DurationWithTags(key string, d time.Duration, tags ...*tags.TagModel) {
+func (m *MetricsImpl) DurationWithTags(key string, d time.Duration, tags ...*tags.TagModel) {
 	m.HistogramWithTags(key+".duration", d.Milliseconds(), tags...)
 }
 
-func (m *MetricsImpl2) Timer(key string) func() {
+func (m *MetricsImpl) Timer(key string) func() {
 	return m.TimerWithTags(key)
 }
 
-func (m *MetricsImpl2) TimerWithTags(key string, tags ...*tags.TagModel) func() {
+func (m *MetricsImpl) TimerWithTags(key string, tags ...*tags.TagModel) func() {
 	start := time.Now()
 	return func() {
 		duration := time.Since(start)
@@ -110,11 +142,11 @@ func (m *MetricsImpl2) TimerWithTags(key string, tags ...*tags.TagModel) func() 
 	}
 }
 
-func (m *MetricsImpl2) Flush() {
+func (m *MetricsImpl) Flush() {
 	m.histograms = make(map[string]*instruments.Histogram)
 	m.counters = make(map[string]*instruments.Counter)
 	m.gauges = make(map[string]*instruments.Gauge)
 }
 
-func (m *MetricsImpl2) Close() {
+func (m *MetricsImpl) Close() {
 }

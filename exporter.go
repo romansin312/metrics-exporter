@@ -80,7 +80,7 @@ func (e *Exporter) GetMeter(name string) otelMetric.Meter {
 	return e.meterProvider.Meter(name)
 }
 
-func (e *Exporter) CreateMetrics(meterName string) *MetricsImpl2 {
+func (e *Exporter) CreateMetrics(meterName string) *MetricsImpl {
 	meter := e.GetMeter(meterName)
 	return NewMetrics(meter)
 }

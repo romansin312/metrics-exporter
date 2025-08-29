@@ -18,7 +18,7 @@ func (g *Gauge) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	}
 
 	if g.gauge == nil {
-		err := g.Create(key, "")
+		err := g.CreateInnerInstrument(key, "")
 		if err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ func (g *Gauge) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	return nil
 }
 
-func (g *Gauge) Create(key string, description string) error {
+func (g *Gauge) CreateInnerInstrument(key string, description string) error {
 	newGauge, err := g.meter.Float64Gauge(key, metric.WithDescription(description))
 	if err != nil {
 		return err

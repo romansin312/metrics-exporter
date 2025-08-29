@@ -15,8 +15,13 @@ func NewCounter(meter metric.Meter) *Counter {
 	return &Counter{meter: meter}
 }
 
-func (x Counter) Create(key string, description string) error {
-	counter, err := x.meter.Int64Counter(key, metric.WithDescription(description))
+func (x *Counter) CreateInnerInstrument(key string, description string) error {
+	opts := make([]metric.Int64CounterOption, 0)
+	if description != "" {
+		opts = append(opts, metric.WithDescription(description))
+	}
+
+	counter, err := x.meter.Int64Counter(key, opts...)
 	if err != nil {
 		return err
 	}
@@ -25,14 +30,14 @@ func (x Counter) Create(key string, description string) error {
 	return nil
 }
 
-func (x Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
+func (x *Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	value, err := convertToInt64(n)
 	if err != nil {
 		return err
 	}
 
 	if x.counter == nil {
-		err := x.Create(key, "")
+		err := x.CreateInnerInstrument(key, "")
 		if err != nil {
 			return err
 		}
@@ -44,4 +49,4 @@ func (x Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error 
 	return nil
 }
 
-var _ IInstrument = Counter{}
+var _ IInstrument = &Counter{}
