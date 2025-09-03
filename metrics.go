@@ -6,6 +6,7 @@ import (
 	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type Metrics struct {
 	gauges     map[string]*instruments.Gauge
 	histograms map[string]*instruments.Histogram
 	meter      metric.Meter
+	mu         sync.RWMutex
 }
 
 func NewMetrics(ctx context.Context, opts ...configOption) (*Metrics, error) {
@@ -49,11 +51,12 @@ func (m *Metrics) Count(key string, n interface{}) {
 	m.CountWithTags(key, n)
 }
 func (m *Metrics) CountWithTags(key string, n interface{}, tags ...*tags.TagModel) {
-	counter := m.counters[key]
-	if counter == nil {
-		m.counters[key] = instruments.NewCounter(m.meter)
-		counter = m.counters[key]
-	}
+	counter := getOrCreateInstrument(
+		&m.mu,
+		m.counters,
+		key,
+		func() *instruments.Counter { return instruments.NewCounter(m.meter) },
+	)
 
 	err := counter.Apply(key, n, tags...)
 	if err != nil {
@@ -66,11 +69,12 @@ func (m *Metrics) Gauge(key string, n interface{}) {
 }
 
 func (m *Metrics) GaugeWithTags(key string, n interface{}, tags ...*tags.TagModel) {
-	gauge := m.gauges[key]
-	if gauge == nil {
-		gauge = instruments.NewGauge(m.meter)
-		m.gauges[key] = gauge
-	}
+	gauge := getOrCreateInstrument(
+		&m.mu,
+		m.gauges,
+		key,
+		func() *instruments.Gauge { return instruments.NewGauge(m.meter) },
+	)
 
 	err := gauge.Apply(key, n, tags...)
 	if err != nil {
@@ -82,15 +86,17 @@ func (m *Metrics) Histogram(bucket string, v interface{}) {
 	m.HistogramWithTags(bucket, v)
 }
 
-func (m *Metrics) HistogramWithTags(bucket string, v interface{}, tags ...*tags.TagModel) {
-	if m.histograms[bucket] == nil {
-		m.histograms[bucket] = instruments.NewHistogram(m.meter)
-	}
+func (m *Metrics) HistogramWithTags(key string, v interface{}, tags ...*tags.TagModel) {
+	histogram := getOrCreateInstrument(
+		&m.mu,
+		m.histograms,
+		key,
+		func() *instruments.Histogram { return instruments.NewHistogram(m.meter) },
+	)
 
-	histogram := m.histograms[bucket]
-	err := histogram.Apply(bucket, v, tags...)
+	err := histogram.Apply(key, v, tags...)
 	if err != nil {
-		log.Printf("metrics: failed to apply histogram %s: %v", bucket, err)
+		log.Printf("metrics: failed to apply histogram %s: %v", key, err)
 	}
 }
 
@@ -123,12 +129,59 @@ func (m *Metrics) TimerWithTags(key string, tags ...*tags.TagModel) func() {
 }
 
 func (m *Metrics) Flush() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.histograms = make(map[string]*instruments.Histogram)
 	m.counters = make(map[string]*instruments.Counter)
 	m.gauges = make(map[string]*instruments.Gauge)
 }
 
+func (e *exporter) ForceFlush(ctx context.Context) error {
+	if e.meterProvider != nil {
+		return e.meterProvider.ForceFlush(ctx)
+	}
+	return nil
+}
+
 func (m *Metrics) Close() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.exporter != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := m.exporter.ForceFlush(ctx); err != nil {
+			log.Printf("metrics: failed to force flush metrics: %v", err)
+		}
+
+		if err := m.exporter.Shutdown(ctx); err != nil {
+			log.Printf("metrics: failed to shutdown exporter gracefully: %v", err)
+		}
+	}
+}
+func getOrCreateInstrument[T any](
+	mu *sync.RWMutex,
+	instrumentMap map[string]*T,
+	key string,
+	createFunc func() *T,
+) *T {
+	mu.RLock()
+	instrument := instrumentMap[key]
+	mu.RUnlock()
+
+	if instrument == nil {
+		mu.Lock()
+		defer mu.Unlock()
+		
+		if instrumentMap[key] == nil {
+			instrumentMap[key] = createFunc()
+		}
+		instrument = instrumentMap[key]
+	}
+
+	return instrument
 }
 
 var _ IMetrics = &Metrics{}

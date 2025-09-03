@@ -59,6 +59,10 @@ func newExporter(ctx context.Context, cfg *config) (*exporter, error) {
 	meterProvider := metric.NewMeterProvider(readers...)
 
 	shutdownFunc := func(ctx context.Context) error {
+		if flushErr := meterProvider.ForceFlush(ctx); flushErr != nil {
+			err = flushErr
+		}
+
 		var err error
 		for _, exp := range exporters {
 			if shutdownErr := exp.Shutdown(ctx); shutdownErr != nil {
