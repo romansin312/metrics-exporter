@@ -10,24 +10,24 @@ import (
 )
 
 type Metrics struct {
-	exporter   *Exporter
+	exporter   *exporter
 	counters   map[string]*instruments.Counter
 	gauges     map[string]*instruments.Gauge
 	histograms map[string]*instruments.Histogram
 	meter      metric.Meter
 }
 
-func NewMetrics(ctx context.Context, opts ...ConfigOption) (*Metrics, error) {
-	config, err := NewConfig(opts...)
+func NewMetrics(ctx context.Context, opts ...configOption) (*Metrics, error) {
+	config, err := newConfig(opts...)
 	if err != nil {
 		return nil, err
 	}
-	
-	exporter, err := NewExporter(ctx, config)
+
+	exporter, err := newExporter(ctx, config)
 	if err != nil {
 		return nil, err
 	}
-	meter := exporter.GetMeter(config.scope)
+	meter := exporter.getMeter(config.scope)
 	return &Metrics{
 		exporter:   exporter,
 		meter:      meter,

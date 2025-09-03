@@ -13,12 +13,12 @@ import (
 	"time"
 )
 
-type Exporter struct {
+type exporter struct {
 	meterProvider *metric.MeterProvider
 	shutdownFunc  func(context.Context) error
 }
 
-func NewExporter(ctx context.Context, cfg *Config) (*Exporter, error) {
+func newExporter(ctx context.Context, cfg *config) (*exporter, error) {
 	var exporters []metric.Exporter
 
 	otlpExp, err := otlpmetrichttp.New(ctx, cfg.build()...)
@@ -72,17 +72,17 @@ func NewExporter(ctx context.Context, cfg *Config) (*Exporter, error) {
 		return err
 	}
 
-	return &Exporter{
+	return &exporter{
 		meterProvider: meterProvider,
 		shutdownFunc:  shutdownFunc,
 	}, nil
 }
 
-func (e *Exporter) GetMeter(name string) otelMetric.Meter {
+func (e *exporter) getMeter(name string) otelMetric.Meter {
 	return e.meterProvider.Meter(name)
 }
 
-func (e *Exporter) Shutdown(ctx context.Context) error {
+func (e *exporter) Shutdown(ctx context.Context) error {
 	if e.shutdownFunc != nil {
 		return e.shutdownFunc(ctx)
 	}

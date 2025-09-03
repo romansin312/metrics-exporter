@@ -13,7 +13,7 @@ const defaultSendingInterval = time.Second * 3
 const defaultTimeout = time.Second * 5
 const defaultScope = "default"
 
-type Config struct {
+type config struct {
 	host                  string
 	urlPath               string
 	headers               map[string]string
@@ -25,15 +25,15 @@ type Config struct {
 	scope                 string
 }
 
-type ConfigOption func(*Config)
+type configOption func(*config)
 
 /*
-NewConfig - функция создания нового объекта конфигурации.
+newConfig - функция создания нового объекта конфигурации.
 
-Если название сервиса и хост не будут переданы как ConfigOption иди прописаны в переменных окружения, метод вернёт ошибку.
+Если название сервиса и хост не будут переданы как configOption иди прописаны в переменных окружения, метод вернёт ошибку.
 */
-func NewConfig(opts ...ConfigOption) (*Config, error) {
-	newConfig := &Config{
+func newConfig(opts ...configOption) (*config, error) {
+	newConfig := &config{
 		serviceName:     "",
 		host:            "",
 		useSsl:          true,
@@ -63,8 +63,8 @@ func NewConfig(opts ...ConfigOption) (*Config, error) {
 /*
 WithUrlPath устанавливает путь к адресу коллектора. По умолчанию "/v1/metrics".
 */
-func WithUrlPath(urlPath string) ConfigOption {
-	return func(c *Config) {
+func WithUrlPath(urlPath string) configOption {
+	return func(c *config) {
 		if urlPath != "" {
 			c.urlPath = urlPath
 		}
@@ -74,8 +74,8 @@ func WithUrlPath(urlPath string) ConfigOption {
 /*
 WithHeaders устанавливает дополнительные заголовки запроса, которые будут отправлены в коллектор (например, авторизация).
 */
-func WithHeaders(headers map[string]string) ConfigOption {
-	return func(c *Config) {
+func WithHeaders(headers map[string]string) configOption {
+	return func(c *config) {
 		c.headers = headers
 	}
 }
@@ -83,8 +83,8 @@ func WithHeaders(headers map[string]string) ConfigOption {
 /*
 WithTimeout устанавливает таймаут соединения с коллектором, по умолчанию - 5 секунд.
 */
-func WithTimeout(timeout time.Duration) ConfigOption {
-	return func(c *Config) {
+func WithTimeout(timeout time.Duration) configOption {
+	return func(c *config) {
 		if timeout > 0 {
 			c.timeout = timeout
 		}
@@ -94,8 +94,8 @@ func WithTimeout(timeout time.Duration) ConfigOption {
 /*
 WithSendingInterval устанавливает периодичность отправки метрик в коллектор, по умолчанию - 3 секунды.
 */
-func WithSendingInterval(sendingInterval time.Duration) ConfigOption {
-	return func(c *Config) {
+func WithSendingInterval(sendingInterval time.Duration) configOption {
+	return func(c *config) {
 		if sendingInterval > 0 {
 			c.sendingInterval = sendingInterval
 		}
@@ -105,8 +105,8 @@ func WithSendingInterval(sendingInterval time.Duration) ConfigOption {
 /*
 WithEnableConsoleExporter устанавливает, выводить ли метрики дополнительно в консоль, по умолчанию значение false.
 */
-func WithEnableConsoleExporter(enableConsoleExporter bool) ConfigOption {
-	return func(c *Config) {
+func WithEnableConsoleExporter(enableConsoleExporter bool) configOption {
+	return func(c *config) {
 		c.enableConsoleExporter = enableConsoleExporter
 	}
 }
@@ -114,16 +114,16 @@ func WithEnableConsoleExporter(enableConsoleExporter bool) ConfigOption {
 /*
 WithUseSsl устанавливает, использовать ли SSL при соединении с коллектором, по умолчанию значение true.
 */
-func WithUseSsl(useSsl bool) ConfigOption {
-	return func(c *Config) {
+func WithUseSsl(useSsl bool) configOption {
+	return func(c *config) {
 		c.useSsl = useSsl
 	}
 }
 
 /*
  */
-func WithScope(scope string) ConfigOption {
-	return func(c *Config) {
+func WithScope(scope string) configOption {
+	return func(c *config) {
 		c.scope = scope
 	}
 }
@@ -131,8 +131,8 @@ func WithScope(scope string) ConfigOption {
 /*
 WithServiceName устанавливает название сервиса, для которого будут отправляться метрики
 */
-func WithServiceName(serviceName string) ConfigOption {
-	return func(c *Config) {
+func WithServiceName(serviceName string) configOption {
+	return func(c *config) {
 		c.serviceName = serviceName
 	}
 }
@@ -140,13 +140,13 @@ func WithServiceName(serviceName string) ConfigOption {
 /*
 WithHost - хост адреса коллектора метрик (например, localhost:1234).
 */
-func WithHost(host string) ConfigOption {
-	return func(c *Config) {
+func WithHost(host string) configOption {
+	return func(c *config) {
 		c.host = host
 	}
 }
 
-func (c *Config) build() []otlpmetrichttp.Option {
+func (c *config) build() []otlpmetrichttp.Option {
 	result := make([]otlpmetrichttp.Option, 0)
 	result = append(result, otlpmetrichttp.WithEndpoint(c.host))
 	result = append(result, otlpmetrichttp.WithTimeout(c.timeout))
@@ -163,8 +163,8 @@ func (c *Config) build() []otlpmetrichttp.Option {
 	return result
 }
 
-func (c *Config) loadFromEnv() {
-	if envEndpoint := os.Getenv("METRICS_ENDPOINT"); envEndpoint != "" {
+func (c *config) loadFromEnv() {
+	if envEndpoint := os.Getenv("METRICS_HOST"); envEndpoint != "" {
 		c.host = envEndpoint
 	}
 
@@ -194,6 +194,10 @@ func (c *Config) loadFromEnv() {
 
 	if envServiceName := os.Getenv("METRICS_SERVICE_NAME"); envServiceName != "" {
 		c.serviceName = envServiceName
+	}
+
+	if scope := os.Getenv("METRICS_SCOPE"); scope != "" {
+		c.scope = scope
 	}
 
 	if envHeaders := os.Getenv("METRICS_HEADERS"); envHeaders != "" {
