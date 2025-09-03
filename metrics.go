@@ -1,6 +1,7 @@
 package metrics_exporter
 
 import (
+	"context"
 	"github.com/romansin312/metrics-exporter/instruments"
 	"github.com/romansin312/metrics-exporter/tags"
 	"go.opentelemetry.io/otel/metric"
@@ -9,19 +10,31 @@ import (
 )
 
 type Metrics struct {
-	meter      metric.Meter
+	exporter   *Exporter
 	counters   map[string]*instruments.Counter
 	gauges     map[string]*instruments.Gauge
 	histograms map[string]*instruments.Histogram
+	meter      metric.Meter
 }
 
-func NewMetrics(meter metric.Meter) *Metrics {
+func NewMetrics(ctx context.Context, opts ...ConfigOption) (*Metrics, error) {
+	config, err := NewConfig(opts...)
+	if err != nil {
+		return nil, err
+	}
+	
+	exporter, err := NewExporter(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	meter := exporter.GetMeter(config.scope)
 	return &Metrics{
+		exporter:   exporter,
 		meter:      meter,
 		counters:   make(map[string]*instruments.Counter),
 		gauges:     make(map[string]*instruments.Gauge),
 		histograms: make(map[string]*instruments.Histogram),
-	}
+	}, nil
 }
 
 func (m *Metrics) Increment(key string) {
@@ -32,42 +45,9 @@ func (m *Metrics) IncrementWithTags(key string, tags ...*tags.TagModel) {
 	m.CountWithTags(key, 1, tags...)
 }
 
-func (m *Metrics) CreateCounter(key string, description string) error {
-	newCounter := instruments.NewCounter(m.meter)
-	err := newCounter.CreateInnerInstrument(key, description)
-	if err != nil {
-		return err
-	}
-
-	m.counters[key] = newCounter
-
-	return nil
+func (m *Metrics) Count(key string, n interface{}) {
+	m.CountWithTags(key, n)
 }
-
-func (m *Metrics) CreateGauge(key string, description string) error {
-	newGauge := instruments.NewGauge(m.meter)
-	err := newGauge.CreateInnerInstrument(key, description)
-	if err != nil {
-		return err
-	}
-
-	m.gauges[key] = newGauge
-
-	return nil
-}
-
-func (m *Metrics) CreateHistogram(key string, description string) error {
-	newHistogram := instruments.NewHistogram(m.meter)
-	err := newHistogram.CreateInnerInstrument(key, description)
-	if err != nil {
-		return err
-	}
-
-	m.histograms[key] = newHistogram
-
-	return nil
-}
-
 func (m *Metrics) CountWithTags(key string, n interface{}, tags ...*tags.TagModel) {
 	counter := m.counters[key]
 	if counter == nil {
@@ -150,3 +130,5 @@ func (m *Metrics) Flush() {
 
 func (m *Metrics) Close() {
 }
+
+var _ IMetrics = &Metrics{}

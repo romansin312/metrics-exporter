@@ -18,7 +18,7 @@ type Exporter struct {
 	shutdownFunc  func(context.Context) error
 }
 
-func InitExporter(ctx context.Context, cfg *Config) (*Exporter, error) {
+func NewExporter(ctx context.Context, cfg *Config) (*Exporter, error) {
 	var exporters []metric.Exporter
 
 	otlpExp, err := otlpmetrichttp.New(ctx, cfg.build()...)
@@ -78,17 +78,8 @@ func InitExporter(ctx context.Context, cfg *Config) (*Exporter, error) {
 	}, nil
 }
 
-func (e *Exporter) GetMeterProvider() *metric.MeterProvider {
-	return e.meterProvider
-}
-
 func (e *Exporter) GetMeter(name string) otelMetric.Meter {
 	return e.meterProvider.Meter(name)
-}
-
-func (e *Exporter) CreateMetrics(meterName string) *Metrics {
-	meter := e.GetMeter(meterName)
-	return NewMetrics(meter)
 }
 
 func (e *Exporter) Shutdown(ctx context.Context) error {
