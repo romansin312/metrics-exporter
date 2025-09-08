@@ -12,7 +12,7 @@ type Gauge struct {
 }
 
 func (g *Gauge) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
-	value, err := convertToFloat64(n)
+	value, err := ConvertToFloat64(n)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (g *Gauge) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 		}
 	}
 
-	attrs := convertTagsToAttributes(tags)
+	attrs := ConvertTagsToAttributes(tags)
 	g.gauge.Record(context.Background(), value, metric.WithAttributes(attrs...))
 
 	return nil

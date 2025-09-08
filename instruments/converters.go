@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func convertToFloat64(n interface{}) (float64, error) {
+func ConvertToFloat64(n interface{}) (float64, error) {
 	switch v := n.(type) {
 	case int:
 		return float64(v), nil
@@ -37,7 +37,7 @@ func convertToFloat64(n interface{}) (float64, error) {
 	}
 }
 
-func convertToInt64(n interface{}) (int64, error) {
+func ConvertToInt64(n interface{}) (int64, error) {
 	switch v := n.(type) {
 	case int:
 		return int64(v), nil
@@ -68,7 +68,7 @@ func convertToInt64(n interface{}) (int64, error) {
 	}
 }
 
-func convertTagsToAttributes(tags []*tags.TagModel) []attribute.KeyValue {
+func ConvertTagsToAttributes(tags []*tags.TagModel) []attribute.KeyValue {
 	if len(tags) == 0 {
 		return nil
 	}

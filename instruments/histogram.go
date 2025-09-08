@@ -12,7 +12,7 @@ type Histogram struct {
 }
 
 func (h *Histogram) Apply(key string, v interface{}, tags ...*tags.TagModel) error {
-	value, err := convertToFloat64(v)
+	value, err := ConvertToFloat64(v)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (h *Histogram) Apply(key string, v interface{}, tags ...*tags.TagModel) err
 		}
 	}
 
-	attrs := convertTagsToAttributes(tags)
+	attrs := ConvertTagsToAttributes(tags)
 	h.histogram.Record(context.Background(), value, metric.WithAttributes(attrs...))
 
 	return nil

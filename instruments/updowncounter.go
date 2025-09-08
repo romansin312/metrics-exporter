@@ -6,22 +6,22 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-type Counter struct {
-	counter metric.Int64Counter
+type UpDownCounter struct {
+	counter metric.Int64UpDownCounter
 	meter   metric.Meter
 }
 
-func NewCounter(meter metric.Meter) *Counter {
-	return &Counter{meter: meter}
+func NewUpDownCounterCounter(meter metric.Meter) *UpDownCounter {
+	return &UpDownCounter{meter: meter}
 }
 
-func (x *Counter) CreateInnerInstrument(key string, description string) error {
-	opts := make([]metric.Int64CounterOption, 0)
+func (x *UpDownCounter) CreateInnerInstrument(key string, description string) error {
+	opts := make([]metric.Int64UpDownCounterOption, 0)
 	if description != "" {
 		opts = append(opts, metric.WithDescription(description))
 	}
 
-	counter, err := x.meter.Int64Counter(key, opts...)
+	counter, err := x.meter.Int64UpDownCounter(key, opts...)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (x *Counter) CreateInnerInstrument(key string, description string) error {
 	return nil
 }
 
-func (x *Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
+func (x *UpDownCounter) Apply(key string, n interface{}, tags ...*tags.TagModel) error {
 	value, err := ConvertToInt64(n)
 	if err != nil {
 		return err
@@ -49,4 +49,4 @@ func (x *Counter) Apply(key string, n interface{}, tags ...*tags.TagModel) error
 	return nil
 }
 
-var _ IInstrument = &Counter{}
+var _ IInstrument = &UpDownCounter{}

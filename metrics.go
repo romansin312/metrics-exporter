@@ -11,12 +11,13 @@ import (
 )
 
 type Metrics struct {
-	exporter   *exporter
-	counters   map[string]*instruments.Counter
-	gauges     map[string]*instruments.Gauge
-	histograms map[string]*instruments.Histogram
-	meter      metric.Meter
-	mu         sync.RWMutex
+	exporter       *exporter
+	upDownCounters map[string]*instruments.UpDownCounter
+	counters       map[string]*instruments.Counter
+	gauges         map[string]*instruments.Gauge
+	histograms     map[string]*instruments.Histogram
+	meter          metric.Meter
+	mu             sync.RWMutex
 }
 
 func NewMetrics(ctx context.Context, opts ...configOption) (*Metrics, error) {
@@ -31,11 +32,12 @@ func NewMetrics(ctx context.Context, opts ...configOption) (*Metrics, error) {
 	}
 	meter := exporter.getMeter(config.scope)
 	return &Metrics{
-		exporter:   exporter,
-		meter:      meter,
-		counters:   make(map[string]*instruments.Counter),
-		gauges:     make(map[string]*instruments.Gauge),
-		histograms: make(map[string]*instruments.Histogram),
+		exporter:       exporter,
+		meter:          meter,
+		counters:       make(map[string]*instruments.Counter),
+		gauges:         make(map[string]*instruments.Gauge),
+		histograms:     make(map[string]*instruments.Histogram),
+		upDownCounters: make(map[string]*instruments.UpDownCounter),
 	}, nil
 }
 
@@ -61,6 +63,46 @@ func (m *Metrics) CountWithTags(key string, n interface{}, tags ...*tags.TagMode
 	err := counter.Apply(key, n, tags...)
 	if err != nil {
 		log.Printf("metrics: failed to apply counter %s: %v", key, err)
+	}
+}
+
+func (m *Metrics) Add(key string, n interface{}) {
+	m.AddWithTags(key, n)
+}
+func (m *Metrics) AddWithTags(key string, n interface{}, tags ...*tags.TagModel) {
+	upDownCounter := getOrCreateInstrument(
+		&m.mu,
+		m.upDownCounters,
+		key,
+		func() *instruments.UpDownCounter { return instruments.NewUpDownCounterCounter(m.meter) },
+	)
+
+	err := upDownCounter.Apply(key, n, tags...)
+	if err != nil {
+		log.Printf("metrics: failed to apply updowncounter %s: %v", key, err)
+	}
+}
+
+func (m *Metrics) Subtract(key string, n interface{}) {
+	m.SubtractWithTags(key, n)
+}
+func (m *Metrics) SubtractWithTags(key string, n interface{}, tags ...*tags.TagModel) {
+	upDownCounter := getOrCreateInstrument(
+		&m.mu,
+		m.upDownCounters,
+		key,
+		func() *instruments.UpDownCounter { return instruments.NewUpDownCounterCounter(m.meter) },
+	)
+
+	convertedValue, err := instruments.ConvertToInt64(n)
+	if err != nil {
+		log.Printf("metrics: failed to convert value to int64: %v", err)
+		return
+	}
+
+	err = upDownCounter.Apply(key, -convertedValue, tags...)
+	if err != nil {
+		log.Printf("metrics: failed to apply updowncounter %s: %v", key, err)
 	}
 }
 
@@ -174,7 +216,7 @@ func getOrCreateInstrument[T any](
 	if instrument == nil {
 		mu.Lock()
 		defer mu.Unlock()
-		
+
 		if instrumentMap[key] == nil {
 			instrumentMap[key] = createFunc()
 		}
