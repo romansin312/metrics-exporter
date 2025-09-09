@@ -25,5 +25,5 @@ type IMetrics interface {
 	Timer(key string) func()
 	TimerWithTags(key string, tags ...*tags.TagModel) func()
 	Flush()
-	Close()
+	Close() error
 }

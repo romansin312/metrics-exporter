@@ -186,7 +186,7 @@ func (e *exporter) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-func (m *Metrics) Close() {
+func (m *Metrics) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -196,13 +196,18 @@ func (m *Metrics) Close() {
 
 		if err := m.exporter.ForceFlush(ctx); err != nil {
 			log.Printf("metrics: failed to force flush metrics: %v", err)
+			return err
 		}
 
 		if err := m.exporter.Shutdown(ctx); err != nil {
 			log.Printf("metrics: failed to shutdown exporter gracefully: %v", err)
+			return err
 		}
 	}
+
+	return nil
 }
+
 func getOrCreateInstrument[T any](
 	mu *sync.RWMutex,
 	instrumentMap map[string]*T,
